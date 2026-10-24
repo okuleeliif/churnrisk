@@ -1,3 +1,13 @@
+# ==============================================================================
+# UYGULAMAYI CALISTIRMAK ICIN (Terminal'e sirayla yapistir):
+#
+#   cd ~/Desktop/churnlens
+#   source venv/bin/activate
+#   python -m streamlit run app.py
+#
+# Durdurmak icin: Ctrl + C
+# ==============================================================================
+
 import joblib
 import matplotlib.pyplot as plt
 import numpy as np
@@ -7,7 +17,7 @@ import streamlit as st
 
 from data_layer import get_data_source
 
-# Sayfa Yapilandirmasi
+# Sayfa Yapılandırması
 st.set_page_config(
     page_title="ChurnLens - SaaS Retention & What-If Studio",
     page_icon="📊",
@@ -18,7 +28,7 @@ CATEGORICAL_COLS = ["contract_type", "company_size", "signup_channel"]
 
 
 # ==============================================================================
-# 1. Model, Ozellikler ve Veriyi Yukleme & Onbellekleme
+# 1. Model, Özellikler ve Veriyi Yükleme & Önbellekleme
 #    (@st.cache_resource -> tek proses omru boyunca bir kez yuklenir)
 #    Veri artik dogrudan CSV degil, data_layer uzerinden okunuyor.
 #    CHURNLENS_DATA_SOURCE ortam degiskeni degistirilerek uygulama
@@ -50,7 +60,7 @@ with st.sidebar:
 
 
 # ==============================================================================
-# 2. Tum Portfoyu Skorlama - AYRI bir cache katmani.
+# 2. Tüm Portföyü Skorlama - AYRI bir cache katmanı.
 #    Buyuk veri setlerinde (100k-1M+ satir) bu adim maliyetli olabilir;
 #    @st.cache_data sayesinde veri/model degismedigi surece tekrar
 #    hesaplanmaz (session'lar arasi da paylasilir, sadece ilk kullanici
@@ -74,19 +84,19 @@ def score_portfolio(df_raw: pd.DataFrame, _model, features: list[str]) -> pd.Dat
 
 df_raw = score_portfolio(df_raw, model, model_features)
 
-# Baslik
-st.title("📊 ChurnLens: SaaS Musteri Kayip & Karar Destek Platformu")
+# Başlık
+st.title("📊 ChurnLens: SaaS Müşteri Kayıp & Karar Destek Platformu")
 st.caption(
-    "Portfoy risklerini izleyin, segment bazli aksiyon alin ve tekil What-If simulasyonlari gerceklestirin."
+    "Portföy risklerini izleyin, segment bazlı aksiyon alın ve tekil What-If simülasyonları gerçekleştirin."
 )
 st.caption(
-    "ℹ️ Model, gercekci sekilde eksik veri (`feature_adoption_rate`, `nps_score`) ve "
-    "dengesiz sinif dagilimi (~%14 churn) icerecek sekilde egitildi."
+    "ℹ️ Model, gerçekçi şekilde eksik veri (`feature_adoption_rate`, `nps_score`) ve "
+    "dengesiz sınıf dağılımı (~%14 churn) içerecek şekilde eğitildi."
 )
 st.divider()
 
 # ==============================================================================
-# BOLUM 1: SIRKET GENELI PORTFOY OZETI
+# BÖLÜM 1: ŞİRKET GENELİ PORTFÖY ÖZETİ
 # ==============================================================================
 total_customers = len(df_raw)
 predicted_churners = int(df_raw["predicted_churn"].sum())
@@ -95,29 +105,29 @@ at_risk_mrr = df_raw[df_raw["predicted_churn"] == 1]["monthly_charges"].sum()
 total_mrr = df_raw["monthly_charges"].sum()
 
 col_m1, col_m2, col_m3, col_m4 = st.columns(4)
-col_m1.metric("Toplam Musteri", f"{total_customers:,}")
+col_m1.metric("Toplam Müşteri", f"{total_customers:,}")
 col_m2.metric(
-    "Risk Altindaki Musteri",
+    "Risk Altındaki Müşteri",
     f"{predicted_churners:,}",
-    f"%{churn_rate:.1f} Kayip Orani",
+    f"%{churn_rate:.1f} Kayıp Oranı",
     delta_color="inverse",
 )
 col_m3.metric(
-    "Tehlikedeki Aylik Ciro ($MRR)",
+    "Tehlikedeki Aylık Ciro ($MRR)",
     f"${at_risk_mrr:,.0f}",
     f"%{(at_risk_mrr / total_mrr) * 100:.1f} Pay",
     delta_color="inverse",
 )
-col_m4.metric("Toplam Aylik Ciro ($MRR)", f"${total_mrr:,.0f}")
+col_m4.metric("Toplam Aylık Ciro ($MRR)", f"${total_mrr:,.0f}")
 
 st.divider()
 
 # ==============================================================================
-# BOLUM 2: 4'LU TOPLU RISK SEGMENTASYONU (MAKRO MUDAHALE)
+# BÖLÜM 2: 4'LÜ TOPLU RİSK SEGMENTASYONU (MAKRO MÜDAHALE)
 # ==============================================================================
-st.subheader("🎯 1. Toplu Risk Segmentasyonu (Makro Mudahale)")
+st.subheader("🎯 1. Toplu Risk Segmentasyonu (Makro Müdahale)")
 st.caption(
-    "Risk altindaki musteriler kok nedenlerine gore 4 operasyonel kumeye ayrilmistir:"
+    "Risk altındaki müşteriler kök nedenlerine göre 4 operasyonel kümeye ayrılmıştır:"
 )
 
 seg_onboarding = df_raw[
@@ -149,45 +159,45 @@ seg_commercial = df_raw[
 
 c_s1, c_s2, c_s3, c_s4 = st.columns(4)
 c_s1.metric(
-    "1. Onboarding Kirilganlari",
-    f"{len(seg_onboarding)} Musteri",
+    "1. Onboarding Kırılganları",
+    f"{len(seg_onboarding)} Müşteri",
     f"${seg_onboarding['monthly_charges'].sum():,.0f} MRR",
 )
 c_s2.metric(
-    "2. Kullanimi Dusenler",
-    f"{len(seg_engagement)} Musteri",
+    "2. Kullanımı Düşenler",
+    f"{len(seg_engagement)} Müşteri",
     f"${seg_engagement['monthly_charges'].sum():,.0f} MRR",
 )
 c_s3.metric(
-    "3. Destek Krizi Yasayanlar",
-    f"{len(seg_support)} Musteri",
+    "3. Destek Krizi Yaşayanlar",
+    f"{len(seg_support)} Müşteri",
     f"${seg_support['monthly_charges'].sum():,.0f} MRR",
 )
 c_s4.metric(
-    "4. Sozlesme & Odeme Riski",
-    f"{len(seg_commercial)} Musteri",
+    "4. Sözleşme & Ödeme Riski",
+    f"{len(seg_commercial)} Müşteri",
     f"${seg_commercial['monthly_charges'].sum():,.0f} MRR",
 )
 
-with st.expander("📂 Segment Listelerini Incele ve Indir"):
+with st.expander("📂 Segment Listelerini İncele ve İndir"):
     seg_choice = st.selectbox(
-        "Goruntulenecek Segmenti Secin:",
+        "Görüntülenecek Segmenti Seçin:",
         [
-            "1. Onboarding Kirilganlari (CSM Egitimi)",
-            "2. Kullanimi Dusenler (Pazarlama Re-activation)",
-            "3. Destek Krizi (Teknik Oncelik)",
-            "4. Sozlesme & Odeme Riski (Satis Kampanyasi)",
+            "1. Onboarding Kırılganları (CSM Eğitimi)",
+            "2. Kullanımı Düşenler (Pazarlama Re-activation)",
+            "3. Destek Krizi (Teknik Öncelik)",
+            "4. Sözleşme & Ödeme Riski (Satış Kampanyası)",
         ],
     )
     mapping = {
-        "1. Onboarding Kirilganlari (CSM Egitimi)": seg_onboarding,
-        "2. Kullanimi Dusenler (Pazarlama Re-activation)": seg_engagement,
-        "3. Destek Krizi (Teknik Oncelik)": seg_support,
-        "4. Sozlesme & Odeme Riski (Satis Kampanyasi)": seg_commercial,
+        "1. Onboarding Kırılganları (CSM Eğitimi)": seg_onboarding,
+        "2. Kullanımı Düşenler (Pazarlama Re-activation)": seg_engagement,
+        "3. Destek Krizi (Teknik Öncelik)": seg_support,
+        "4. Sözleşme & Ödeme Riski (Satış Kampanyası)": seg_commercial,
     }
-    st.dataframe(mapping[seg_choice], use_container_width=True, hide_index=True)
+    st.dataframe(mapping[seg_choice], width="stretch", hide_index=True)
     st.download_button(
-        "⬇️ Bu Segmenti CSV Olarak Indir",
+        "⬇️ Bu Segmenti CSV Olarak İndir",
         data=mapping[seg_choice].to_csv(index=False).encode("utf-8"),
         file_name="churnlens_segment.csv",
         mime="text/csv",
@@ -196,17 +206,53 @@ with st.expander("📂 Segment Listelerini Incele ve Indir"):
 st.divider()
 
 # ==============================================================================
-# BOLUM 3: MUSTERI SECIMI VE UST ORIJINAL VERI TABLOSU
+# BÖLÜM 3: MÜŞTERİ ARAMA, SIRALAMA VE SEÇİM
 # ==============================================================================
-st.subheader("🔍 2. Musteri Inceleme & Orijinal Profil")
+st.subheader("🔍 2. Müşteri İnceleme & Arama Merkezi")
 
-sorted_customers = df_raw.sort_values(by="churn_probability", ascending=False)
-customer_options = sorted_customers["customer_id"].tolist()
+# Arama ve Sıralama Filtre Çubuğu
+col_search, col_sort = st.columns([2, 1])
+with col_search:
+    search_query = st.text_input(
+        "🔎 Müşteri ID / No ile Ara:",
+        placeholder="Örn: 1042 veya 10",
+        help="Aramak istediğiniz müşteri numarasını girin.",
+    )
+with col_sort:
+    sort_order = st.selectbox(
+        "📊 Risk Sıralaması:",
+        options=[
+            "En Yüksek Riskten En Düşüğe (Azalan)",
+            "En Düşük Riskten En Yükseğe (Artan)",
+            "Aylık Gelire Göre (Yüksekten Düşüğe)",
+        ],
+    )
+
+# Veriyi sıralama seçeneğine göre düzenleme
+if sort_order == "En Yüksek Riskten En Düşüğe (Azalan)":
+    df_filtered = df_raw.sort_values(by="churn_probability", ascending=False)
+elif sort_order == "En Düşük Riskten En Yükseğe (Artan)":
+    df_filtered = df_raw.sort_values(by="churn_probability", ascending=True)
+else:
+    df_filtered = df_raw.sort_values(by="monthly_charges", ascending=False)
+
+# Arama filtresini uygulama
+if search_query.strip():
+    df_filtered = df_filtered[
+        df_filtered["customer_id"].astype(str).str.contains(search_query.strip())
+    ]
+
+if len(df_filtered) == 0:
+    st.warning("⚠️ Aradığınız kriterlere uygun müşteri bulunamadı.")
+    st.stop()
+
+customer_options = df_filtered["customer_id"].tolist()
+_lookup = df_filtered.set_index("customer_id")
 
 selected_customer_id = st.selectbox(
-    "Incelemek istediginiz musteriyi secin:",
+    f"Müşteri Seçin ({len(customer_options)} müşteri listeleniyor):",
     options=customer_options,
-    format_func=lambda cid: f"Musteri #{cid} | Orijinal Risk: %{sorted_customers[sorted_customers['customer_id'] == cid]['churn_probability'].values[0] * 100:.1f} | Aylik Gelir: ${sorted_customers[sorted_customers['customer_id'] == cid]['monthly_charges'].values[0]:.2f}",
+    format_func=lambda cid: f"Müşteri #{cid} | Orijinal Risk: %{_lookup.at[cid, 'churn_probability'] * 100:.1f} | Aylık Gelir: ${_lookup.at[cid, 'monthly_charges']:.2f}",
 )
 
 cust_row = df_raw[df_raw["customer_id"] == selected_customer_id].iloc[0]
@@ -257,36 +303,36 @@ nps_display = "Veri Yok" if pd.isna(cust_row["nps_score"]) else f"{cust_row['nps
 summary_table = pd.DataFrame(
     [
         {
-            "Musteri ID": int(cust_row["customer_id"]),
+            "Müşteri ID": int(cust_row["customer_id"]),
             "Orijinal Risk": f"%{original_prob * 100:.1f}",
-            "Orijinal Teshis": "🚨 Terk Edebilir" if original_prob >= 0.5 else "✅ Guvenli",
-            "Firma Buyuklugu": cust_row["company_size"],
-            "Kayit Kanali": cust_row["signup_channel"],
-            "Abonelik Suresi": f"{cust_row['tenure_months']} Ay",
-            "Sozlesme": cust_row["contract_type"],
-            "Aylik Ucret": f"${cust_row['monthly_charges']:.2f}",
-            "Son Giris": f"{cust_row['days_since_last_login']} Gun Once",
-            "Aktif Gun": f"{cust_row['usage_frequency']} Gun/Ay",
-            "Ozellik Kullanimi": adoption_display,
+            "Orijinal Teşhis": "🚨 Terk Edebilir" if original_prob >= 0.5 else "✅ Güvenli",
+            "Firma Büyüklüğü": cust_row["company_size"],
+            "Kayıt Kanalı": cust_row["signup_channel"],
+            "Abonelik Süresi": f"{cust_row['tenure_months']} Ay",
+            "Sözleşme": cust_row["contract_type"],
+            "Aylık Ücret": f"${cust_row['monthly_charges']:.2f}",
+            "Son Giris": f"{cust_row['days_since_last_login']} Gün Önce",
+            "Aktif Gün": f"{cust_row['usage_frequency']} Gün/Ay",
+            "Özellik Kullanımı": adoption_display,
             "NPS": nps_display,
-            "Destek Kaydi": f"{cust_row['support_tickets']} Adet",
-            "Fatura Gecikmesi": f"{cust_row['payment_delay_days']} Gun",
+            "Destek Kaydı": f"{cust_row['support_tickets']} Adet",
+            "Fatura Gecikmesi": f"{cust_row['payment_delay_days']} Gün",
         }
     ]
 )
-st.dataframe(summary_table, use_container_width=True, hide_index=True)
+st.dataframe(summary_table, width="stretch", hide_index=True)
 
 st.markdown("---")
 
 # ==============================================================================
-# BOLUM 4: SOLDA WHAT-IF BARLARI, SAGDA GUNCEL SONUC & SHAP
+# BÖLÜM 4: SOLDA WHAT-IF BARLARI, SAĞDA GÜNCEL SONUÇ & SHAP
 # ==============================================================================
 col_left, col_right = st.columns([1, 1], gap="large")
 
 with col_left:
-    st.subheader("🧪 3. What-If Simulasyon Barlari")
+    st.subheader("🧪 3. What-If Simülasyon Barları")
     st.caption(
-        "Degerleri kaydirin. Her alanin yanindaki **↺** butonuyla orijinal degerine donebilirsiniz."
+        "Değerleri kaydırın. Her alanın yanındaki **↺** butonuyla orijinal değerine dönebilirsiniz."
     )
 
     def slider_row(label, min_v, max_v, key, reset_val, help_text=None):
@@ -296,7 +342,7 @@ with col_left:
         with c2:
             st.write("")
             st.write("")
-            st.button("↺", key=f"btn_reset_{key}", on_click=reset_single_val, args=(key, reset_val), help="Sifirla")
+            st.button("↺", key=f"btn_reset_{key}", on_click=reset_single_val, args=(key, reset_val), help="Sıfırla")
         return val
 
     def select_row(label, options, key, reset_val):
@@ -306,7 +352,7 @@ with col_left:
         with c2:
             st.write("")
             st.write("")
-            st.button("↺", key=f"btn_reset_{key}", on_click=reset_single_val, args=(key, reset_val), help="Sifirla")
+            st.button("↺", key=f"btn_reset_{key}", on_click=reset_single_val, args=(key, reset_val), help="Sıfırla")
         return val
 
     def number_row(label, min_v, max_v, key, reset_val):
@@ -316,27 +362,27 @@ with col_left:
         with c2:
             st.write("")
             st.write("")
-            st.button("↺", key=f"btn_reset_{key}", on_click=reset_single_val, args=(key, reset_val), help="Sifirla")
+            st.button("↺", key=f"btn_reset_{key}", on_click=reset_single_val, args=(key, reset_val), help="Sıfırla")
         return val
 
     sim_tenure = slider_row(
-        f"Abonelik Suresi (Ay)  *(Orijinal: {cust_row['tenure_months']})*",
+        f"Abonelik Süresi (Ay)  *(Orijinal: {cust_row['tenure_months']})*",
         1, 72, "val_tenure_months", int(cust_row["tenure_months"]),
     )
     sim_contract = select_row(
-        f"Sozlesme Turu  *(Orijinal: {cust_row['contract_type']})*",
+        f"Sözleşme Türü  *(Orijinal: {cust_row['contract_type']})*",
         categorical_options["contract_type"], "val_contract_type", str(cust_row["contract_type"]),
     )
     sim_company_size = select_row(
-        f"Firma Buyuklugu  *(Orijinal: {cust_row['company_size']})*",
+        f"Firma Büyüklüğü  *(Orijinal: {cust_row['company_size']})*",
         categorical_options["company_size"], "val_company_size", str(cust_row["company_size"]),
     )
     sim_channel = select_row(
-        f"Kayit Kanali  *(Orijinal: {cust_row['signup_channel']})*",
+        f"Kayıt Kanalı  *(Orijinal: {cust_row['signup_channel']})*",
         categorical_options["signup_channel"], "val_signup_channel", str(cust_row["signup_channel"]),
     )
     sim_charges = slider_row(
-        f"Aylik Ucret ($)  *(Orijinal: ${cust_row['monthly_charges']:.2f})*",
+        f"Aylık Ücret ($)  *(Orijinal: ${cust_row['monthly_charges']:.2f})*",
         15.0, 400.0, "val_monthly_charges", float(cust_row["monthly_charges"]),
     )
     sim_last_login = slider_row(
@@ -344,30 +390,30 @@ with col_left:
         0, 30, "val_days_since_last_login", int(cust_row["days_since_last_login"]),
     )
     sim_freq = slider_row(
-        f"Aylik Aktif Gun  *(Orijinal: {cust_row['usage_frequency']})*",
+        f"Aylık Aktif Gün  *(Orijinal: {cust_row['usage_frequency']})*",
         1, 30, "val_usage_frequency", int(cust_row["usage_frequency"]),
     )
     sim_adoption = slider_row(
-        f"Ozellik Kullanim Orani (%)  *(Orijinal: {adoption_display})*",
+        f"Özellik Kullanım Oranı (%)  *(Orijinal: {adoption_display})*",
         5, 100, "val_feature_adoption_rate", safe_int(cust_row["feature_adoption_rate"], median_adoption),
-        help_text="Orijinal veri eksikse populasyon medyani varsayilan olarak kullanilir.",
+        help_text="Orijinal veri eksikse popülasyon medyanı varsayılan olarak kullanılır.",
     )
     sim_tickets = number_row(
-        f"Destek Kaydi  *(Orijinal: {cust_row['support_tickets']})*",
+        f"Destek Kaydı  *(Orijinal: {cust_row['support_tickets']})*",
         0, 20, "val_support_tickets", int(cust_row["support_tickets"]),
     )
     sim_delay = number_row(
-        f"Fatura Gecikme Gunu  *(Orijinal: {cust_row['payment_delay_days']})*",
+        f"Fatura Gecikme Günü  *(Orijinal: {cust_row['payment_delay_days']})*",
         0, 60, "val_payment_delay_days", int(cust_row["payment_delay_days"]),
     )
     sim_nps = slider_row(
         f"NPS Skoru  *(Orijinal: {nps_display})*",
         -100, 100, "val_nps_score", safe_int(cust_row["nps_score"], median_nps),
-        help_text="Orijinal veri eksikse populasyon medyani varsayilan olarak kullanilir.",
+        help_text="Orijinal veri eksikse popülasyon medyanı varsayılan olarak kullanılır.",
     )
 
 with col_right:
-    st.subheader("📈 4. Guncel Sonuc & SHAP Aciklanabilirlik")
+    st.subheader("📈 4. Güncel Sonuç & SHAP Açıklanabilirlik")
 
     sim_raw = pd.DataFrame(
         [{
@@ -395,30 +441,30 @@ with col_right:
     prob_diff = (sim_prob - original_prob) * 100
 
     if sim_pred == 1:
-        st.error(f"🚨 **Guncel Durum:** Terk Edebilir (Risk: %{sim_prob * 100:.1f})")
+        st.error(f"🚨 **Güncel Durum:** Terk Edebilir (Risk: %{sim_prob * 100:.1f})")
     else:
-        st.success(f"✅ **Guncel Durum:** Sirkette Kalacak (Risk: %{sim_prob * 100:.1f})")
+        st.success(f"✅ **Güncel Durum:** Şirkette Kalacak (Risk: %{sim_prob * 100:.1f})")
 
     m_col1, m_col2 = st.columns(2)
     with m_col1:
         st.metric(
-            label="Simule Edilen Risk",
+            label="Simüle Edilen Risk",
             value=f"%{sim_prob * 100:.1f}",
-            delta=f"{prob_diff:+.1f}% Degisim",
+            delta=f"{prob_diff:+.1f}% Değişim",
             delta_color="inverse",
         )
     with m_col2:
         st.metric(
             label="Orijinal Risk",
             value=f"%{original_prob * 100:.1f}",
-            delta="Yuksek Risk" if original_prob >= 0.5 else "Dusuk Risk",
+            delta="Yüksek Risk" if original_prob >= 0.5 else "Düşük Risk",
             delta_color="off",
         )
 
     st.progress(sim_prob)
 
     # SHAP Analizi
-    st.markdown("#### 🧠 Model Neden Bu Karari Verdi? (SHAP Analizi)")
+    st.markdown("#### 🧠 Model Neden Bu Kararı Verdi? (SHAP Analizi)")
     shap_values = explainer(sim_input)
 
     fig, ax = plt.subplots(figsize=(8, 4.2))
@@ -428,10 +474,10 @@ with col_right:
     plt.clf()
 
 # ==============================================================================
-# BOLUM 5: YAZILI KOK NEDEN RAPORU & KURTARMA RECETESI
+# BÖLÜM 5: YAZILI KÖK NEDEN RAPORU & KURTARMA REÇETESİ
 # ==============================================================================
 st.markdown("---")
-st.subheader("📄 5. Yonetici / Musteri Mudahale Raporu")
+st.subheader("📄 5. Yönetici / Müşteri Müdahale Raporu")
 
 shap_df = pd.DataFrame({"feature": model_features, "importance": shap_values[0].values})
 risk_drivers = shap_df[shap_df["importance"] > 0].sort_values(by="importance", ascending=False)
@@ -501,7 +547,7 @@ action_note = action_notes.get(
 
 col_rep_btn, _ = st.columns([1, 3])
 with col_rep_btn:
-    generate_report = st.button("📋 Kurtarma Planı Raporu Üret", use_container_width=True, type="primary")
+    generate_report = st.button("📋 Kurtarma Planı Raporu Üret", width="stretch", type="primary")
 
 if generate_report:
     report_output = f"""
