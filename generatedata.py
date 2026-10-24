@@ -21,6 +21,8 @@ Bu versiyonda:
      kullanım ile mantıklı şekilde ilişkilendirildi.
 """
 
+import os
+
 import numpy as np
 import pandas as pd
 
@@ -186,6 +188,7 @@ df = pd.DataFrame(
     }
 )
 
+os.makedirs("data", exist_ok=True)  # Repo yeni indirildiyse data/ klasoru olmayabilir
 df.to_csv("data/saas_churn_data.csv", index=False)
 
 print("Dataset basariyla uretildi ve 'data/saas_churn_data.csv' dosyasina kaydedildi!")

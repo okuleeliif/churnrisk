@@ -19,6 +19,8 @@ Onceki versiyondaki eksikler ve bu versiyondaki cozumler:
      ayni sema kullanilsin.
 """
 
+import os
+
 import joblib
 import numpy as np
 import pandas as pd
@@ -135,6 +137,7 @@ print(f"Modelin gercek dogrulugu               = {(y_pred == y_test).mean():.4f}
 # ------------------------------------------------------------------
 categorical_options = {col: sorted(df[col].dropna().unique().tolist()) for col in CATEGORICAL_COLS}
 
+os.makedirs("models", exist_ok=True)  # Repo yeni indirildiyse models/ klasoru olmayabilir
 joblib.dump(model, "models/churn_model.pkl")
 joblib.dump(model_features, "models/model_features.pkl")
 joblib.dump(categorical_options, "models/categorical_options.pkl")

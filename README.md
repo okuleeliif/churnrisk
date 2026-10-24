@@ -2,116 +2,137 @@
 
 ChurnLens is a Streamlit application that analyzes a SaaS company's customer
 portfolio, predicts which customers are at risk of churning using machine
-learning, and provides actionable, **What-If simulations** ("what happens to
+learning, and provides actionable **What-If simulations** ("what happens to
 the risk if this customer's support tickets go down?") to support retention
 decisions.
 
+> The app interface is in Turkish.
+
 ## ✨ Features
 
-- **Portfolio-wide risk scoring** — analyzes the entire customer base,
-  including MRR (monthly recurring revenue) at risk.
+- **Portfolio-wide risk scoring** — scores the entire customer base and shows
+  the monthly recurring revenue (MRR) at risk.
 - **Automatic segmentation** — buckets at-risk customers into 4 operational
   clusters by root cause (onboarding, engagement drop, support crisis,
-  contract/payment risk).
+  contract/payment risk), each downloadable as CSV.
+- **Customer search & sorting** — find a customer by ID and sort the list by
+  highest risk, lowest risk or monthly revenue.
 - **What-If simulation** — instantly see how risk changes when you adjust a
   customer's attributes (contract type, support tickets, usage frequency,
-  etc.).
-- **SHAP explainability** — visualizes exactly why the model made a given
-  prediction, broken down by feature contribution.
+  etc.), with a one-click reset for each field.
+- **SHAP explainability** — visualizes why the model made a given prediction,
+  broken down by feature contribution.
 - **Automated intervention report** — generates a downloadable "rescue plan"
   report for the selected customer.
-- **Pluggable data layer** — demo with CSV today, connect to a real
-  Postgres/MySQL/BigQuery source tomorrow with zero code changes (see
-  [Switching Data Sources](#️-switching-data-sources)).
+- **Pluggable data layer** — runs on a local CSV by default and can connect to
+  Postgres/MySQL/SQLite or BigQuery through environment variables, with no
+  code changes (see [Switching Data Sources](#️-switching-data-sources)).
 
 ## 🏗️ Architecture
 
 ```
-generate_data.py  →  data/saas_churn_data.csv  →  data_layer/  →  train_model.py  →  models/*.pkl
-                                                        │
-                                                        ▼
-                                                     app.py (Streamlit UI)
+generatedata.py  →  data/saas_churn_data.csv  →  data_layer/  →  trainmodel.py  →  models/*.pkl
+                                                       │
+                                                       ▼
+                                                    app.py (Streamlit UI)
 ```
 
-The `data_layer/` package fully decouples the data source (CSV / SQL /
-BigQuery) from the rest of the application — which source is used is
-determined entirely by an environment variable, with no code changes
-required.
+The `data_layer/` package decouples the data source (CSV / SQL / BigQuery)
+from the rest of the application. Which source is used is determined by the
+`CHURNLENS_DATA_SOURCE` environment variable.
+
+## 📈 Data & Model
+
+- **Synthetic data:** 5,000 SaaS customers with realistically correlated
+  features, a noisy churn label, an imbalanced class distribution (~14% churn)
+  and missing values in `feature_adoption_rate` and `nps_score`.
+- **Model:** scikit-learn `HistGradientBoostingClassifier` (handles missing
+  values natively), tuned with `RandomizedSearchCV` and 5-fold
+  `StratifiedKFold`, using `class_weight="balanced"` for the imbalance.
+- **Evaluation (held-out 20% test set):** ROC-AUC ≈ 0.78, PR-AUC ≈ 0.42
+  (vs. a 0.14 baseline), churn recall ≈ 0.69. PR-AUC and the confusion matrix
+  are reported alongside ROC-AUC because they are more informative on
+  imbalanced data.
 
 ## 🚀 Setup
 
+Requires Python 3.10+.
+
 ```bash
-# 1. Install dependencies
+# 1. Clone the repository
+git clone https://github.com/okuleeliif/churnrisk.git
+cd churnrisk
+
+# 2. Create and activate a virtual environment
+python3 -m venv venv
+source venv/bin/activate        # Windows: venv\Scripts\activate
+
+# 3. Install dependencies
 pip install -r requirements.txt
 
-# 2. (Optional) SQL mode dependencies are already included in
-# requirements.txt (sqlalchemy / psycopg2-binary)
+# 4. Generate the demo dataset  (creates data/saas_churn_data.csv)
+python generatedata.py
 
-# 3. Generate the demo dataset
-python generate_data.py
+# 5. Train the model  (creates the files in models/)
+python trainmodel.py
 
-# 4. Train the model
-python train_model.py
-
-# 5. Launch the app
-streamlit run app.py
+# 6. Launch the app
+python -m streamlit run app.py
 ```
+
+The app opens at `http://localhost:8501`.
+
+> The `data/` and `models/` folders are not stored in the repository (they are
+> excluded in `.gitignore`); steps 4 and 5 recreate them. You only need to run
+> them once.
 
 ## ⚙️ Switching Data Sources
 
-By default, the app reads the local CSV file produced by `generate_data.py`.
-To connect to a real database instead:
+By default the app reads the local CSV file produced by `generatedata.py`.
+To use a real database instead:
 
-1. Copy `.env.example` to `.env`.
-2. Fill in the desired mode (`sql` or `bigquery`) and connection details.
-3. Restart the app — it connects to the new source with zero code changes.
+1. Copy the template: `cp .env.example .env`
+2. Set `CHURNLENS_DATA_SOURCE` to `sql` or `bigquery` and fill in the
+   connection details.
+3. Install the extra packages for that mode (they are optional and commented
+   out in `requirements.txt`):
+   - SQL: `pip install sqlalchemy psycopg2-binary` (MySQL: `pymysql`)
+   - BigQuery: `pip install google-cloud-bigquery db-dtypes`
+4. Restart the app.
 
-See `.env.example` for detailed examples and the full list of environment
-variables.
+The source table/query must return the same columns as the demo CSV.
+`trainmodel.py` uses the same data layer, so the model can also be retrained
+directly on the real source.
 
-> ⚠️ Never commit your `.env` file — it may contain real credentials /
-> connection strings. `.gitignore` already excludes it by default.
+> ⚠️ Never commit your `.env` file — it may contain real credentials.
+> `.gitignore` already excludes it.
 
 ## 📁 Project Structure
 
 ```
 .
-├── app.py                    # Streamlit UI (main application)
-├── generate_data.py           # Synthetic demo data generator
-├── train_model.py             # Model training script
+├── app.py                     # Streamlit UI (main application)
+├── generatedata.py            # Synthetic demo data generator
+├── trainmodel.py              # Model training & evaluation script
 ├── requirements.txt
-├── .env.example                # Environment variable template
-├── data/
-│   └── saas_churn_data.csv     # Generated demo data (output of generate_data.py)
-├── models/
-│   ├── churn_model.pkl          # Trained model
-│   ├── model_features.pkl       # Model feature list
-│   └── categorical_options.pkl  # Categorical field options
-└── data_layer/                 # Data source abstraction layer
-    ├── base.py                   # Abstract contract (ChurnDataSource)
-    ├── csv_source.py              # CSV implementation
-    ├── sql_source.py               # Postgres/MySQL/SQLite implementation
-    ├── bigquery_source.py          # BigQuery implementation
-    ├── config.py                    # Environment variable loading
-    └── factory.py                    # Factory that selects the right source
+├── .env.example               # Environment variable template
+├── data_layer/                # Data source abstraction layer
+│   ├── base.py                # Abstract contract (ChurnDataSource)
+│   ├── csv_source.py          # CSV implementation
+│   ├── sql_source.py          # Postgres/MySQL/SQLite implementation
+│   ├── bigquery_source.py     # BigQuery implementation
+│   ├── config.py              # Environment variable loading
+│   └── factory.py             # Selects the right source
+├── data/                      # (generated) saas_churn_data.csv
+└── models/                    # (generated) churn_model.pkl, model_features.pkl,
+                               #             categorical_options.pkl
 ```
 
 ## 🧰 Tech Stack
 
 - **Streamlit** — web UI
-- **scikit-learn** (`HistGradientBoostingClassifier`) — churn prediction model
-- **SHAP** — model explainability
+- **scikit-learn** — churn prediction model and evaluation
+- **SHAP** + **matplotlib** — model explainability
 - **pandas / numpy** — data processing
-- **SQLAlchemy** — SQL data source support (optional)
-- **google-cloud-bigquery** — BigQuery data source support (optional)
-
-## 📝 Note
-
-The files in `data/` and `models/` can be regenerated at any time by running
-`generate_data.py` and `train_model.py`. If you'd like to keep the repo
-lightweight, you can exclude them via `.gitignore` — the relevant lines are
-already there, commented out, ready to enable.
-
-## 📄 License
-
-Add your preferred license here (e.g. MIT, Apache 2.0).
+- **python-dotenv** — `.env` configuration
+- **SQLAlchemy**, **google-cloud-bigquery** — optional data source support

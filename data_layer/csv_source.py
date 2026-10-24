@@ -19,7 +19,7 @@ class CSVDataSource(ChurnDataSource):
         if not self.path.exists():
             raise FileNotFoundError(
                 f"CSV veri dosyasi bulunamadi: {self.path}. "
-                "Once 'python generate_data.py' calistirilmali."
+                "Once 'python generatedata.py' calistirilmali."
             )
         df = pd.read_csv(self.path)
         if not include_label and "churn" in df.columns:
